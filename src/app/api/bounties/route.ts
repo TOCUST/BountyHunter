@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const items = await prisma.bounty.findMany({
     where: { reviewStatus: 'APPROVED', status: { in: ['OPEN','ASSIGNED','IN_PROGRESS'] } },
     orderBy: { createdAt: 'desc' },
