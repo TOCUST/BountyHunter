@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { runAutoModeration } from '@/lib/moderation'
 
-export async function POST(req: NextRequest, context: { params: { id: string } }) {
-  const { params } = context
+export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const user = await requireAuth()
   const bounty = await prisma.bounty.findUnique({ where: { id: params.id } })
   if (!bounty) return NextResponse.json({ error: 'Not found' }, { status: 404 })
