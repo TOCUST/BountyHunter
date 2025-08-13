@@ -20,7 +20,7 @@ export async function runAutoModeration(texts: string[], locale?: string) {
       ? new RegExp(r.pattern, 'iu').test(source)
       : source.includes(normalizeForModeration(r.pattern))
     if (matched) {
-      hits.push({ ruleId: r.id, type: r.type as any, excerpt: r.pattern })
+      hits.push({ ruleId: r.id, type: (r.type === 'BLOCK' ? 'BLOCK' : 'REVIEW'), excerpt: r.pattern })
       if (r.type !== 'ALLOW') score += r.score
     }
   }
