@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 
-export async function POST(_request: Request, { params }: any) {
+export async function POST(_request: Request, context: { params: Record<string, string> }) {
+  const { params } = context
   const admin = await requireAdmin()
   const bounty = await prisma.bounty.findUnique({ where: { id: params.id } })
   if (!bounty) return NextResponse.json({ error: 'Not found' }, { status: 404 })
