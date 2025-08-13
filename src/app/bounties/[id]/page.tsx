@@ -6,8 +6,9 @@ async function getBounty(id: string) {
   return res.json()
 }
 
-export default async function BountyDetail({ params }: { params: { id: string } }) {
-  const b = await getBounty(params.id)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default async function BountyDetail({ params }: any) {
+  const b = await getBounty(params.id as string)
   if (!b) return <div className="p-6">Not found</div>
   return (
     <main className="p-6 max-w-3xl mx-auto">
