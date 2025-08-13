@@ -15,10 +15,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(updated)
 }
 
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
-
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdmin()
   const bounty = await prisma.bounty.findUnique({ where: { id: params.id } })
