@@ -9,7 +9,7 @@ type Rule = {
   locale: string | null
   severity: number
   score: number
-  tags: any
+  tags: unknown
   createdAt: string
 }
 

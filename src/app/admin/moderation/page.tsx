@@ -30,8 +30,8 @@ export default function ModerationAdminPage() {
     try {
       const data = await api<QueueItem[]>('/api/moderation/queue')
       setItems(data)
-    } catch (e: any) {
-      setError(String(e))
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }
