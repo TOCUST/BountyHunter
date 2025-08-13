@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   const take = Math.min(Number(url.searchParams.get('take') || '20') || 20, 50)
   const cursor = url.searchParams.get('cursor') || undefined
 
-  const where: any = {
+  const where: Prisma.BountyWhereInput = {
     reviewStatus: 'APPROVED',
     status: { in: ['OPEN','ASSIGNED','IN_PROGRESS'] },
   }

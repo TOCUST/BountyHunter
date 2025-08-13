@@ -26,7 +26,7 @@ export default function BountiesListPage() {
     setLoading(false)
   }
 
-  useEffect(()=>{ load(true) }, [])
+  useEffect(()=>{ void load(true) }, [])
 
   return (
     <main className="p-6 max-w-5xl mx-auto">
