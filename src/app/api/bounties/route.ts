@@ -2,12 +2,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url)
+  const q = url.searchParams.get('q')?.trim() || ''
+  const min = Number(url.searchParams.get('min') || '0') || 0
+  const max = Number(url.searchParams.get('max') || '0') || 0
+  const take = Math.min(Number(url.searchParams.get('take') || '20') || 20, 50)
+  const cursor = url.searchParams.get('cursor') || undefined
+
+  const where: any = {
+    reviewStatus: 'APPROVED',
+    status: { in: ['OPEN','ASSIGNED','IN_PROGRESS'] },
+  }
+  if (q) {
+    where.OR = [
+      { title: { contains: q } },
+      { description: { contains: q } },
+    ]
+  }
+  if (min > 0) where.budgetMin = { gte: min }
+  if (max > 0) where.budgetMax = { lte: max }
+
   const items = await prisma.bounty.findMany({
-    where: { reviewStatus: 'APPROVED', status: { in: ['OPEN','ASSIGNED','IN_PROGRESS'] } },
+    where,
     orderBy: { createdAt: 'desc' },
+    take,
+    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
   })
-  return NextResponse.json(items)
+  return NextResponse.json({ items, nextCursor: items.length === take ? items[items.length - 1].id : null })
 }
 
 export async function POST(req: NextRequest) {
