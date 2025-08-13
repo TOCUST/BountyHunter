@@ -1,12 +1,408 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma schema for BountyHunter MVP
+// SQLite for local dev; can be switched to Postgres later
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  MEMBER
+  ADMIN
+}
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+enum ReviewStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+enum BountyStatus {
+  DRAFT
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  ACCEPTED
+  DISPUTED
+  CLOSED
+  CANCELED
+  EXPIRED
+}
+enum ProposalStatus {
+  PENDING
+  REJECTED
+  ACCEPTED
+}
+enum ContractStatus {
+  PROPOSED
+  ACCEPTED
+  FUNDED
+  IN_PROGRESS
+  SUBMITTED
+  RELEASED
+  COMPLETED
+  CANCELED
+  REFUNDED
+  DISPUTED
+}
+enum EscrowStatus {
+  UNFUNDED
+  FUNDED
+  PARTIALLY_RELEASED
+  RELEASED
+  REFUNDED
+}
+enum SubmissionStatus {
+  SUBMITTED
+  CHANGES_REQUESTED
+  ACCEPTED
+  REJECTED
+}
+enum TransactionType {
+  ESCROW_FUND
+  RELEASE
+  REFUND
+  PLATFORM_FEE
+  PAYOUT
+}
+enum Visibility {
+  PUBLIC
+  INVITE_ONLY
+}
+enum ModerationAction {
+  SUBMIT
+  APPROVE
+  REJECT
+  UPDATE
+  AUTO_FLAG
+  AUTO_REJECT
+}
+enum ModerationRuleType {
+  BLOCK
+  REVIEW
+  ALLOW
+}
+enum OfferStatus {
+  DELIVERED
+  OPENED
+  ACCEPTED
+  EXPIRED
+  CANCELED
+}
+enum PointsReason {
+  REFERRAL_BONUS_INVITER
+  REFERRAL_BONUS_INVITEE
+  POST_FEE_OFFSET
+  WITHDRAW_REQUEST
+  WITHDRAW_REJECT_REFUND
+  ADMIN_ADJUST
+  ACTIVITY_BONUS
+}
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+  REJECTED
+}
+enum WithdrawStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+enum DeviceType {
+  WEB_PUSH
+  ANDROID
+  IOS
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String?  @unique
+  name               String?
+  role               UserRole @default(MEMBER)
+  kycStatus          KycStatus @default(PENDING)
+  locale             String?  // e.g., ko-KR, zh-CN, en-US
+
+  // Points & referrals
+  pointsBalance      Int      @default(0)
+  referralCode       String   @unique
+  referredById       String?
+  referredBy         User?    @relation("UserReferredBy", fields: [referredById], references: [id])
+  referrals          User[]   @relation("UserReferredBy")
+
+  // Geo/push
+  lastLat            Float?
+  lastLng            Float?
+  lastGeoHash        String?
+  lastLocatedAt      DateTime?
+  pushQuietHoursFrom Int?
+  pushQuietHoursTo   Int?
+
+  // Relations
+  bounties           Bounty[] @relation("BountyCreator")
+  proposals          Proposal[]
+  contractsAsHunter  Contract[] @relation("ContractHunter")
+  offers             BountyOffer[]
+  devices            UserDevice[]
+  reviewedBounties   Bounty[]           @relation("BountyReviewer")
+  moderationLogs     ModerationLog[]
+  pointsLedgers      PointsLedger[]
+  withdrawalRequests PointsWithdrawal[]
+  referralClaimsSent ReferralClaim[]    @relation("ReferralInviter")
+  referralClaimsRecv ReferralClaim[]    @relation("ReferralInvitee")
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Bounty {
+  id                 String    @id @default(cuid())
+  creatorId          String
+  creator            User      @relation("BountyCreator", fields: [creatorId], references: [id])
+  title              String
+  description        String
+  currency           String    @default("KRW")
+  budgetMin          Int
+  budgetMax          Int
+  status             BountyStatus @default(DRAFT)
+  deadline           DateTime?
+  tags               Json?
+  acceptanceCriteria String?
+  visibility         Visibility @default(PUBLIC)
+
+  // Review / moderation
+  reviewStatus       ReviewStatus @default(DRAFT)
+  reviewerId         String?
+  reviewer           User?        @relation("BountyReviewer", fields: [reviewerId], references: [id])
+  reviewedAt         DateTime?
+  rejectionReason    String?
+  contentRiskScore   Int      @default(0)
+  autoReviewReason   String?
+
+  // Geo
+  lat                Float?
+  lng                Float?
+  geoHash            String?
+  regionCode         String?
+  isHighValue        Boolean   @default(false)
+  timeLimitMins      Int?
+
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  proposals          Proposal[]
+  contracts          Contract[]
+  offers             BountyOffer[]
+  moderationLogs     ModerationLog[]
+  violations         ModerationViolation[]
+
+  @@index([reviewStatus, status])
+}
+
+model Proposal {
+  id          String   @id @default(cuid())
+  bountyId    String
+  hunterId    String
+  message     String
+  proposedFee Int
+  status      ProposalStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  bounty      Bounty   @relation(fields: [bountyId], references: [id])
+  hunter      User     @relation(fields: [hunterId], references: [id])
+}
+
+model Contract {
+  id                     String    @id @default(cuid())
+  bountyId               String
+  hunterId               String
+  status                 ContractStatus @default(PROPOSED)
+  totalAmount            Int
+  platformFeeAmount      Int      @default(0)
+  currency               String    @default("KRW")
+  escrowPaymentIntentId  String?
+  escrowStatus           EscrowStatus @default(UNFUNDED)
+  acceptBy               DateTime?
+  workDueAt              DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  bounty                 Bounty    @relation(fields: [bountyId], references: [id])
+  hunter                 User      @relation("ContractHunter", fields: [hunterId], references: [id])
+  submissions            Submission[]
+  transactions           Transaction[]
+  dispute                Dispute?
+}
+
+model Submission {
+  id          String   @id @default(cuid())
+  contractId  String
+  message     String?
+  attachments Json?
+  status      SubmissionStatus @default(SUBMITTED)
+  createdAt   DateTime @default(now())
+  contract    Contract @relation(fields: [contractId], references: [id])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  contractId  String
+  type        TransactionType
+  amount      Int
+  currency    String
+  stripeId    String?
+  createdAt   DateTime @default(now())
+  contract    Contract @relation(fields: [contractId], references: [id])
+}
+
+model Dispute {
+  id          String   @id @default(cuid())
+  contractId  String   @unique
+  reason      String
+  status      ReviewStatus @default(PENDING_REVIEW)
+  resolution  String?
+  createdAt   DateTime @default(now())
+  contract    Contract  @relation(fields: [contractId], references: [id])
+}
+
+model ModerationRule {
+  id         String   @id @default(cuid())
+  type       ModerationRuleType
+  pattern    String
+  isRegex    Boolean  @default(false)
+  locale     String?
+  severity   Int      @default(1)
+  score      Int      @default(10)
+  tags       Json?
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  violations ModerationViolation[]
+}
+
+model ModerationViolation {
+  id          String   @id @default(cuid())
+  bountyId    String
+  ruleId      String
+  excerpt     String
+  normalized  String
+  createdAt   DateTime @default(now())
+  bounty      Bounty   @relation(fields: [bountyId], references: [id])
+  rule        ModerationRule @relation(fields: [ruleId], references: [id])
+
+  @@index([bountyId])
+}
+
+model ModerationLog {
+  id           String   @id @default(cuid())
+  bountyId     String
+  moderatorId  String
+  action       ModerationAction
+  reason       String?
+  createdAt    DateTime @default(now())
+  bounty       Bounty   @relation(fields: [bountyId], references: [id])
+  moderator    User     @relation(fields: [moderatorId], references: [id])
+
+  @@index([bountyId])
+  @@index([createdAt])
+}
+
+model UserDevice {
+  id         String  @id @default(cuid())
+  userId     String
+  type       DeviceType
+  token      String
+  locale     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@unique([type, token])
+}
+
+model BountyOffer {
+  id              String   @id @default(cuid())
+  userId          String
+  bountyId        String
+  status          OfferStatus   @default(DELIVERED)
+  expiresAt       DateTime
+  deliveredAt     DateTime @default(now())
+  openedAt        DateTime?
+  acceptedAt      DateTime?
+  locale          String?
+  channel         String?
+  createdByRuleId String?
+  user            User     @relation(fields: [userId], references: [id])
+  bounty          Bounty   @relation(fields: [bountyId], references: [id])
+
+  @@index([userId, status])
+  @@index([bountyId])
+}
+
+model PointsLedger {
+  id           String   @id @default(cuid())
+  userId       String
+  delta        Int
+  balanceAfter Int
+  reason       PointsReason
+  meta         Json?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+model ReferralClaim {
+  id           String   @id @default(cuid())
+  inviterId    String
+  inviteeId    String
+  status       ReferralStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+  qualifiedAt  DateTime?
+  rewardedAt   DateTime?
+  inviter      User     @relation("ReferralInviter", fields: [inviterId], references: [id])
+  invitee      User     @relation("ReferralInvitee", fields: [inviteeId], references: [id])
+
+  @@unique([inviterId, inviteeId])
+}
+
+model PointsWithdrawal {
+  id              String   @id @default(cuid())
+  userId          String
+  points          Int
+  krwAmount       Int
+  status          WithdrawStatus @default(PENDING)
+  reason          String?
+  payoutRef       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+}
+
+model PlatformSettings {
+  id                           Int      @id @default(1)
+  pointsPerKrw                 Float    @default(0.1)
+  referralInviterPts           Int      @default(200)
+  referralInviteePts           Int      @default(200)
+  minWithdrawPoints            Int      @default(3000)
+  withdrawDailyLimitPts        Int      @default(20000)
+  withdrawMonthlyLimitPts      Int      @default(100000)
+  launchAt                     DateTime
+  platformFeeBps               Int      @default(500)
+  platformFeeEnableAtUserCount Int      @default(5000)
+  platformFeeActiveFrom        DateTime?
+  platformFeeManualOverride    Boolean  @default(false)
+  platformFeeActiveOverride    Boolean  @default(false)
+  allowPointsForPlatformFee    Boolean  @default(false)
 }
