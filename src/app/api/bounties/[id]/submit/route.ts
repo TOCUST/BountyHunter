@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { runAutoModeration } from '@/lib/moderation'
 
-export async function POST(_request: Request, { params }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(_request: Request, { params }: any) {
   const user = await requireAuth()
   const bounty = await prisma.bounty.findUnique({ where: { id: params.id } })
   if (!bounty) return NextResponse.json({ error: 'Not found' }, { status: 404 })
