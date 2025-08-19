@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(_request: Request, { params }: any) {
   const u = await requireAuth()
   const offer = await prisma.bountyOffer.findUnique({ where: { id: params.id }, include: { bounty: true } })
   if (!offer || offer.userId !== u.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
