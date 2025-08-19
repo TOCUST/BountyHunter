@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 type Item = { id: string; title: string; budgetMin: number; budgetMax: number; createdAt: string }
 
@@ -11,7 +11,7 @@ export default function BountiesListPage() {
   const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const load = async (reset = false) => {
+  const load = useCallback(async (reset = false) => {
     setLoading(true)
     const params = new URLSearchParams()
     if (q) params.set('q', q)
@@ -24,9 +24,9 @@ export default function BountiesListPage() {
     setItems(reset ? data.items : [...items, ...data.items])
     setCursor(data.nextCursor)
     setLoading(false)
-  }
+  }, [q, min, max, cursor, items])
 
-  useEffect(()=>{ void load(true) }, [])
+  useEffect(()=>{ void load(true) }, [load])
 
   return (
     <main className="p-6 max-w-5xl mx-auto">

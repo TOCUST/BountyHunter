@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import ClientCountdown from '@/components/ClientCountdown'
 
+type OfferItem = { id: string; bountyId: string; expiresAt: string }
+
 async function getBounty(id: string) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/bounties/${id}`, { cache: 'no-store' })
   if (!res.ok) return null
@@ -13,8 +15,9 @@ export default async function BountyDetail({ params }: any) {
   if (!b) return <div className="p-6">Not found</div>
   // fetch my offers for countdown
   const offerRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/offers`, { cache: 'no-store' })
-  const offers = offerRes.ok ? await offerRes.json() : []
-  const myOffer = Array.isArray(offers) ? offers.find((o: any) => o.bountyId === b.id) : null
+  const offersJson: unknown = offerRes.ok ? await offerRes.json() : []
+  const offers = Array.isArray(offersJson) ? (offersJson as OfferItem[]) : []
+  const myOffer = offers.find((o) => o.bountyId === b.id) || null
   return (
     <main className="p-6 max-w-3xl mx-auto">
       <div className="text-sm mb-4"><Link href="/bounties/mine">← 返回我的发布</Link></div>

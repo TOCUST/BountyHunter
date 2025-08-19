@@ -20,7 +20,7 @@ export async function createOffersForBounty(bountyId: string, minutes = 15) {
           userId: u.id,
           bountyId: bounty.id,
           expiresAt,
-          locale: (u as any).locale ?? 'ko-KR',
+          locale: (u as unknown as { locale?: string } | null)?.locale ?? 'ko-KR',
         },
       })
     )
