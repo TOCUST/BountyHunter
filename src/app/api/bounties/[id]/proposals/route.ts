@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, requireAdmin } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 
 // List proposals for a bounty (creator or admin only)
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function GET(_request: Request, { params }: any) {
   const user = await requireAuth()
   const bounty = await prisma.bounty.findUnique({ where: { id: params.id } })
   if (!bounty) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -15,7 +16,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
 }
 
 // Create a proposal by hunter
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(request: Request, { params }: any) {
   const user = await requireAuth()
   const bounty = await prisma.bounty.findUnique({ where: { id: params.id } })
   if (!bounty) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -23,9 +25,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (bounty.reviewStatus !== 'APPROVED' || bounty.status !== 'OPEN') {
     return NextResponse.json({ error: 'Bounty not open' }, { status: 400 })
   }
-  const body = await request.json()
-  const proposedFee = Number(body.proposedFee ?? bounty.budgetMax)
-  const message = String(body.message ?? '')
+  let proposedFee: number
+  let message: string
+  const ct = request.headers.get('content-type') || ''
+  if (ct.includes('application/json')) {
+    const body = await request.json()
+    proposedFee = Number(body.proposedFee ?? bounty.budgetMax)
+    message = String(body.message ?? '')
+  } else {
+    const fd = await request.formData()
+    proposedFee = Number((fd.get('proposedFee') as string) ?? bounty.budgetMax)
+    message = String((fd.get('message') as string) ?? '')
+  }
   const p = await prisma.proposal.create({
     data: { bountyId: bounty.id, hunterId: user.id, message, proposedFee, status: 'PENDING' },
   })
