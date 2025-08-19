@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { isPlatformFeeActive } from '@/lib/platform'
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(_request: Request, { params }: any) {
   const user = await requireAuth()
   const proposal = await prisma.proposal.findUnique({ where: { id: params.id } })
   if (!proposal) return NextResponse.json({ error: 'Not found' }, { status: 404 })
