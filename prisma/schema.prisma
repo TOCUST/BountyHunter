@@ -125,6 +125,26 @@ enum DeviceType {
   IOS
 }
 
+enum NotificationType {
+  BOUNTY_SUBMITTED
+  BOUNTY_APPROVED
+  BOUNTY_REJECTED
+  PROPOSAL_RECEIVED
+  PROPOSAL_ACCEPTED
+  OFFER_RECEIVED
+  OFFER_EXPIRED
+  CONTRACT_FUNDED
+  WORK_SUBMITTED
+  WORK_ACCEPTED
+  WORK_REJECTED
+  FUNDS_RELEASED
+  FUNDS_REFUNDED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+  POINTS_EARNED
+  POINTS_WITHDRAWN
+}
+
 model User {
   id                 String   @id @default(cuid())
   email              String?  @unique
@@ -160,6 +180,7 @@ model User {
   withdrawalRequests PointsWithdrawal[]
   referralClaimsSent ReferralClaim[]    @relation("ReferralInviter")
   referralClaimsRecv ReferralClaim[]    @relation("ReferralInvitee")
+  notifications      Notification[]
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -205,6 +226,7 @@ model Bounty {
   offers             BountyOffer[]
   moderationLogs     ModerationLog[]
   violations         ModerationViolation[]
+  notifications      Notification[]
 
   @@index([reviewStatus, status])
 }
@@ -240,6 +262,7 @@ model Contract {
   submissions            Submission[]
   transactions           Transaction[]
   dispute                Dispute?
+  notifications          Notification[]
 }
 
 model Submission {
@@ -405,4 +428,22 @@ model PlatformSettings {
   platformFeeManualOverride    Boolean  @default(false)
   platformFeeActiveOverride    Boolean  @default(false)
   allowPointsForPlatformFee    Boolean  @default(false)
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  title       String
+  message     String
+  read        Boolean          @default(false)
+  bountyId    String?
+  contractId  String?
+  createdAt   DateTime         @default(now())
+  user        User             @relation(fields: [userId], references: [id])
+  bounty      Bounty?          @relation(fields: [bountyId], references: [id])
+  contract    Contract?        @relation(fields: [contractId], references: [id])
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

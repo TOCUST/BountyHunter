@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { runAutoModeration } from '@/lib/moderation'
+import { notifyBountySubmitted } from '@/lib/notifications'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function POST(_request: Request, { params }: any) {
@@ -34,5 +35,9 @@ export async function POST(_request: Request, { params }: any) {
   for (const h of scan.hits) {
     await prisma.moderationViolation.create({ data: { bountyId: bounty.id, ruleId: h.ruleId, excerpt: h.excerpt, normalized: '' } })
   }
+  
+  // Send notification
+  await notifyBountySubmitted(user.id, bounty.id, bounty.title)
+  
   return NextResponse.json(updated)
 }
