@@ -1,13 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(_request: Request, { params }: any) {
   try {
-    const user = await requireAuth(request)
+    const user = await requireAuth()
     
     const notification = await prisma.notification.update({
       where: {
@@ -20,7 +18,7 @@ export async function POST(
     })
 
     return NextResponse.json(notification)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Notification not found' }, { status: 404 })
   }
 }

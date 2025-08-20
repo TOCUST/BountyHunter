@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth(request)
+    const user = await requireAuth()
     const { searchParams } = new URL(request.url)
     const take = parseInt(searchParams.get('take') || '20')
     const cursor = searchParams.get('cursor')
@@ -21,14 +21,14 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json(notifications)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth(request)
+    const user = await requireAuth()
     const { type, title, message, bountyId, contractId } = await request.json()
 
     const notification = await prisma.notification.create({
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(notification)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 }
