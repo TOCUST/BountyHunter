@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { notifyWorkAccepted, notifyFundsReleased } from '@/lib/notifications'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function POST(_request: Request, { params }: any) {
@@ -15,6 +16,11 @@ export async function POST(_request: Request, { params }: any) {
     await tx.bounty.update({ where: { id: c.bountyId }, data: { status: 'CLOSED' } })
     return true
   })
+  
+  // Send notifications
+  await notifyWorkAccepted(c.hunterId, c.id)
+  await notifyFundsReleased(c.hunterId, c.id, c.totalAmount)
+  
   return NextResponse.json({ ok: result })
 }
 

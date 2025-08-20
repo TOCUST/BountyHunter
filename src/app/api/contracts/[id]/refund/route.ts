@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { notifyFundsRefunded } from '@/lib/notifications'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function POST(_request: Request, { params }: any) {
@@ -15,6 +16,10 @@ export async function POST(_request: Request, { params }: any) {
     await tx.bounty.update({ where: { id: c.bountyId }, data: { status: 'OPEN' } })
     return true
   })
+  
+  // Send notification to poster (they get their money back)
+  await notifyFundsRefunded(c.bounty.creatorId, c.id, c.totalAmount)
+  
   return NextResponse.json({ ok: result })
 }
 

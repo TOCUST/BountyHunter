@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { notifyOfferReceived } from './notifications'
 
 export async function createOffersForBounty(bountyId: string, minutes = 15) {
   const bounty = await prisma.bounty.findUnique({ where: { id: bountyId } })
@@ -25,6 +26,16 @@ export async function createOffersForBounty(bountyId: string, minutes = 15) {
       })
     )
   )
+  
+  // Send notifications to all users who received offers
+  for (const candidate of candidates) {
+    try {
+      await notifyOfferReceived(candidate.id, bounty.id, bounty.title)
+    } catch (error) {
+      console.error('Failed to send offer notification:', error)
+    }
+  }
+  
   return offers
 }
 

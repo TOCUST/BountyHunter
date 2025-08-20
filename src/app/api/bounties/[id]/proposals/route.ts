@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { notifyProposalReceived } from '@/lib/notifications'
 
 // List proposals for a bounty (creator or admin only)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,6 +41,10 @@ export async function POST(request: Request, { params }: any) {
   const p = await prisma.proposal.create({
     data: { bountyId: bounty.id, hunterId: user.id, message, proposedFee, status: 'PENDING' },
   })
+  
+  // Send notification to bounty creator
+  await notifyProposalReceived(bounty.creatorId, bounty.id, bounty.title)
+  
   return NextResponse.json(p)
 }
 

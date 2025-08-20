@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { notifyContractFunded } from '@/lib/notifications'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function POST(_request: Request, { params }: any) {
@@ -21,6 +22,10 @@ export async function POST(_request: Request, { params }: any) {
     })
     return true
   })
+  
+  // Send notification to hunter
+  await notifyContractFunded(c.hunterId, c.id)
+  
   return NextResponse.json({ ok: funded })
 }
 
